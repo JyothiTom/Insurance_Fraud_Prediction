@@ -1,3 +1,9 @@
+"""
+	@script-author: Jyothi Tom, Shekhina Neha, Gokul S, Aishwarya Lakshmi, Srija S, Robin Wilson
+	@script-description: R Code to clean the data and train the Logistic Regression Model  
+  @script-details: Written in RStudio
+"""
+
 library(DescTools)    #For Cramer's V
 insurance <- read.csv("C:\\Users\\admin\\Desktop\\SJC\\Projects\\R Proj\\Insurance\\insurance_claims.csv")
 
