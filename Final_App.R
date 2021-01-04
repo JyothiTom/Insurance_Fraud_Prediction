@@ -1,3 +1,9 @@
+"""
+	@script-author: Jyothi Tom, Shekhina Neha, Gokul S, Aishwarya Lakshmi, Srija S, Robin Wilson
+	@script-description: RShiny app to predict the risk of Auto Insurance Fraud   
+  @script-details: Written in RStudio
+"""
+
 library(shiny)
 library(shinydashboard)
 library(DescTools)    #For Cramer's V
