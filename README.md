@@ -1,6 +1,6 @@
 # Insurance_Fraud_Prediction
 
-Objective: To predict the risk of Autoinsurance Fraud
+Objective: To predict the risk of Auto Insurance Fraud
 
 Data Description:
 The data obtained can be found in the insurance_claims.csv file and it contains 1000 rows and 44 columns. The data can be split into 3 sections, namely:
