@@ -1,21 +1,18 @@
 """
 	@script-author: Jyothi Tom, Shekhina Neha, Gokul S, Aishwarya Lakshmi, Srija S, Robin Wilson
 	@script-description: RShiny app to predict the risk of Auto Insurance Fraud   
-  @script-details: Written in RStudio
+ 	@script-details: Written in RStudio
 """
 
 library(shiny)
 library(shinydashboard)
-library(DescTools)    #For Cramer's V
-library(dummies)
-library(ROCR)
 library(faraway)
 library(ggplot2)
 library(dplyr)
 #********************************************************************************************************************
 #Remove columns with null values
 
-insurance <- read.csv("C:\\Users\\jyoth\\Desktop\\SEM 2\\Bhogle Sir's\\R Proj\\Insurance\\Final\\insurance_claims.csv")
+insurance <- read.csv("C:\\Users\\jyoth\\Desktop\\SEM 2\\Bhogle Sir's\\R Proj\\Insurance\\Final\\cleaned_data.csv")
 null_cols = unique(names(insurance)[which(insurance == '?', arr.ind=T)[, "col"]])
 insurance[,c(null_cols,"policy_number")]<-NULL
 
@@ -92,7 +89,7 @@ ui<-dashboardPage(skin = "red",
                   dashboardBody(
                     
                     tabItems(
-                      # First tab content
+                      #HOMEPAGE
                       tabItem(tabName = "home",
                               #h3("HMIC(HAKUNA MATATA INSURANCE COMPANY"),
                               tags$img(
@@ -101,28 +98,25 @@ ui<-dashboardPage(skin = "red",
                                 width="100%")
                           
                       ),
-                      
+                      #FRAUD DETECTION
                       tabItem(tabName = "fraud_detection",
                               fluidRow(
                                 column(5,selectInput("select1", label = h1("Hobbies"), 
-                                                     choices = list("Camping" = 1, "Chess" = 2, "Cross fit" = 3,"Others"= 4), 
+                                                     choices = list("Camping" = 1, "Chess" = 2, "Cross-fit" = 3,"Others"= 4), 
                                                      selected = 1)),
                                 column(7,selectInput("select2", label = h1("Incident-Severity"), 
-                                                     choices = list("Major Damage"=1,"Minor Damage"=2,"Others"=3 ), 
+                                                     choices = list("Major Damage"=1,"Minor Damage"=2,"Others"=3), 
                                                      selected = 1))),
                               
-                              fluidRow( column(12, sliderInput("select3", h1("Auto Year"),
-                                                               min = 1995, max = 2015, value = 2000,sep=""))),
                               fluidRow(actionButton(inputId = "click",label = "Submit")),
                               
                               
-                              fluidRow(imageOutput(outputId = "Gokul")) #, height="20%",width="20%"))
+                              fluidRow(imageOutput(outputId = "res")) #, height="20%",width="20%"))
                       ),
 
-                      
+                      #PLOTS
                       tabItem(tabName="charts",
                               mainPanel(
-                                #fluidRow(
                                 tabsetPanel(type="tabs",
                                             tabPanel(id="tab1", title="Fraud Cases", 
                                                      selectInput("ch", label = h3("Select Attribute"), 
@@ -146,53 +140,14 @@ ui<-dashboardPage(skin = "red",
 #*************************************************SERVER********************************************************
 
 server<-function(input,output){
+  #Loading the saved LR model
+  lr <- readRDS("C:\\Users\\jyoth\\Desktop\\SEM 2\\Bhogle Sir\\R Proj\\Insurance\\Final\\LR.rda")
   
-  corr_nums<- c("months_as_customer","age","Avg_capital_loss","capital_gains","Avg_capital_gains","total_claim_amount","injury_claim","property_claim","vehicle_claim" )
-  insurance.pca<-prcomp(insurance[corr_nums],center = TRUE, scale. = TRUE)
-  
-  insurance[, corr_nums] <- NULL
-  insurance <- cbind(insurance, insurance.pca$x[,1:4])
-  
-  num<-NULL
-  num <- c(split(names(insurance),sapply(insurance, function(x) paste(class(x), collapse=" ")))$integer, split(names(insurance),sapply(insurance, function(x) paste(class(x), collapse=" ")))$numeric)
-  num<-num[!(num %in% c("auto_year","incident_year","policy_year",corr_nums))]
-
-  
-  nums_final<-c("policy_day","umbrella_limit","PC1")
-  
-  others = names(insurance)[!(names(insurance) %in% c(num,"fraud_reported"))]
-  categ<-dummy.data.frame(insurance,names=others)
-  
-  vars<-c()
-  for (i in names(categ)){
-    p <- chisq.test(categ[,i],insurance$fraud_reported)
-    if(p$p.value<0.07){
-      vars<-c(vars,i)}
-  }
-  
-  insurance[,!(names(insurance) %in% nums_final)]<-NULL
-  insurance<- cbind(categ[,vars], insurance)
-  
-  train<- insurance[1:(0.75*nrow(insurance)),]
-  
-  final <- c("insured_hobbiescamping","insured_hobbieschess","insured_hobbiescross-fit","incident_severityMajor Damage","auto_year2004","fraud_reported")
-  train<-train[,final]
-  test<-insurance[(0.75*nrow(insurance)):nrow(insurance),final]
-  test<-test[,1:length(final)-1]
-  names(train) <- c("camping","chess","cross_fit","major_damage","auto2004","fraud_rep")
-  names(test) <- c("camping","chess","cross_fit","major_damage","auto2004")
-  
-  bm3<-glm(fraud_rep~., data = train, family=binomial(link="logit"))
-  
-  
-  
-  hemanth <- eventReactive(input$click, {
-    
+  result <- eventReactive(input$click, {
     camping=0
     chess=0
     cross_fit=0
     major_damage=0
-    auto2004=0
     
     if (input$select1 == "1") {
       camping=1
@@ -202,23 +157,21 @@ server<-function(input,output){
       cross_fit=1
     } 
     if (input$select2 == "1"){major_damage=1}
-    if (input$select3 == 2004){auto2004=1}
     
+    features <- data.frame(camping,chess,cross_fit,major_damage)
     
-    pred <- data.frame(camping,chess,cross_fit,major_damage,auto2004)
-    
-    probabilities <- predict(bm3,pred, type = "response")
-    w <- ifelse(probabilities > 0.5, "YES", "NO")
-    w=w[[1]]
-    if(w=="NO")
-    { result<- "./safe.png" }
-    else if(w=="YES")
-    { result<- "./fraud.jpg"}
-    return(result)
+    prob <- predict(lr, features, type = "response")
+    pred <- ifelse(prob > 0.5, "YES", "NO")
+    pred = pred[[1]]
+    if(pred=="NO")
+    { result<- "C:\\Users\\jyoth\\Desktop\\SEM 2\\Bhogle Sir\\R Proj\\Insurance\\Final\\safe.png" }
+    else if(pred=="YES")
+    { result<- "C:\\Users\\jyoth\\Desktop\\SEM 2\\Bhogle Sir\\R Proj\\Insurance\\Final\\fraud.jpg"}
+    return(result)    #Returning the predictions
   })
   
-  output$Gokul <- renderImage({
-    filename <- normalizePath(file.path(hemanth()))
+  output$res <- renderImage({
+    filename <- normalizePath(file.path(result()))
     list(src=filename,alt="Oopsie", width=400, height=300)
 
   }, deleteFile = FALSE)
