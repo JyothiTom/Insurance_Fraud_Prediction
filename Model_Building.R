@@ -3,6 +3,7 @@
 	@script-description: R Code to clean the data and train the Logistic Regression Model  
   	@script-details: Written in RStudio
 """
+
 library(DescTools)    #For Cramer's V
 library(dummies)      #For creating dummy variables
 library(ROCR)       #Library to plot ROC
@@ -27,9 +28,11 @@ for (i in null_cols){
   print(chisq.test(coll,fraud))}
 
 #Since it's seen that these columns have no relevant effect on 'fraud_reported', drop them
-insurance[,c(null_cols,"policy_number", "incident_year", "insured_zip", "policy_bind_date","insured_zip",
-             "incident_date","incident_location", "incident_city", "policy_day", "policy_month", "policy_year")]<-NULL
+#Other irrelevant columns were laos dropped
+insurance[,c(null_cols,"policy_number", "incident_year", "insured_zip", "policy_bind_date", "incident_date",
+             "incident_location", "incident_city", "policy_day", "policy_month", "policy_year")]<-NULL
 
+#Exported the cleaned data to be used in the UI for plots
 write.csv(insurance, "C:\\Users\\jyoth\\Desktop\\SEM 2\\Bhogle Sir\\R Proj\\Insurance\\Final\\cleaned_data.csv")
 
 #*************************************************NUMERICAL FEATURES*************************************************
@@ -92,8 +95,7 @@ for (i in others){
 }
 cats     #Relevant categorical features 
 
-cleaned_df <- insurance[,(names(insurance) %in% c(nums_final, "fraud_reported", cats))]
-names(cleaned_df)
+
 #Creating dummy variables
 categ<-dummy.data.frame(insurance,names=cats, sep=":", all=FALSE)   #Creating dummy variables from the categorical variables 
 names(categ)  
@@ -157,5 +159,4 @@ auc(test$fraud_reported,pred1)     #0.9087746
 plot(perf1) > auc(test$fraud_reported,pred1)    #ROC Curve
 
 #Saving the model; Loaded in the UI 
-save(lr1, file="C:\\Users\\jyoth\\Desktop\\SEM 2\\Bhogle Sir\\R Proj\\Insurance\\Final\\LR_Model.rda")
 saveRDS(lr1, file = "C:\\Users\\jyoth\\Desktop\\SEM 2\\Bhogle Sir\\R Proj\\Insurance\\Final\\LR.rda")
